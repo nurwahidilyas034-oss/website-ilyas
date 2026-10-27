@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud Hub – GitHub, Cloud, dan VPS</title>
+<style>
+:root{--bg:#eef2f6;--ink:#14202b;--mute:#52606d;--line:#c9d3dd;--card:#fff;--gh:#1f4fd8;--cl:#0e8a7d;--vps:#c77d0a;--code:#0f1b26}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+h1{font:700 clamp(28px,6vw,44px)/1.15 Georgia,"Iowan Old Style",serif;margin:0 0 10px;letter-spacing:-.01em}
+h2{font:700 22px/1.3 Georgia,serif;margin:36px 0 12px}
+p{max-width:68ch;margin:0 0 12px}.mute{color:var(--mute)}
+.pipe{display:grid;grid-template-columns:1fr;gap:10px;margin:24px 0 8px}
+@media(min-width:640px){.pipe{grid-template-columns:1fr 1fr 1fr}}
+.node{all:unset;cursor:pointer;background:var(--card);border:2px solid var(--line);border-radius:10px;padding:14px 16px;border-left-width:8px}
+.node b{display:block;font-size:18px}.node span{font-size:14px;color:var(--mute)}
+.node[data-k=github]{border-left-color:var(--gh)}.node[data-k=cloud]{border-left-color:var(--cl)}.node[data-k=vps]{border-left-color:var(--vps)}
+.node[aria-selected=true]{border-color:var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.node:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #f5b400;outline-offset:2px}
+.flow{font-size:14px;color:var(--mute);margin:0 0 20px}
+form{display:grid;grid-template-columns:1fr;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+@media(min-width:640px){form{grid-template-columns:1fr 1fr}}
+label{display:grid;gap:4px;font-size:14px;font-weight:600}
+input{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.step{margin:16px 0 0}.step h3{margin:0 0 6px;font-size:16px}
+pre{position:relative;margin:0;background:var(--code);color:#e6edf3;border-radius:8px;padding:12px 74px 12px 14px;overflow-x:auto;font:13px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre}
+.cp{position:absolute;top:8px;right:8px;font:600 12px system-ui;padding:5px 10px;border:0;border-radius:6px;background:#e6edf3;color:var(--ink);cursor:pointer}
+table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px}
+th,td{text-align:left;padding:9px 10px;border:1px solid var(--line);vertical-align:top}
+.wrap{overflow-x:auto}
+.chk{list-style:none;padding:0;margin:0;background:var(--card);border:1px solid var(--line);border-radius:10px}
+.chk li{padding:10px 14px;border-bottom:1px solid var(--line)}.chk li:last-child{border:0}
+.chk label{display:flex;gap:10px;font-weight:400;align-items:flex-start;cursor:pointer}
+.chk input{width:20px;height:20px;margin-top:3px;accent-color:var(--cl)}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:8px 0 12px}.bar i{display:block;height:100%;width:0;background:var(--cl);transition:width .25s}
+footer{margin-top:40px;font-size:13px;color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<h1>Satu repository, dua tujuan deploy.</h1>
+<p class="mute">Kode disimpan di GitHub, situs statis tayang gratis di GitHub Pages (cloud), dan versi penuh berjalan di VPS sendiri. Isi data di bawah, semua perintah ikut menyesuaikan.</p>
+
+<div class="pipe" role="tablist" aria-label="Tiga komponen">
+<button class="node" role="tab" data-k="github" aria-selected="true"><b>GitHub</b><span>Simpan kode dan otomatisasi</span></button>
+<button class="node" role="tab" data-k="cloud" aria-selected="false"><b>Cloud</b><span>GitHub Pages, gratis</span></button>
+<button class="node" role="tab" data-k="vps" aria-selected="false"><b>VPS</b><span>Server milik sendiri</span></button>
+</div>
+<p class="flow">Alur: komputer/HP → push ke GitHub → Actions → Pages (otomatis) dan VPS (lewat SSH).</p>
+
+<h2>Data proyek</h2>
+<form id="f" autocomplete="off">
+<label>Username GitHub<input name="user"></label>
+<label>Nama repository<input name="repo"></label>
+<label>IP VPS<input name="ip"></label>
+<label>User SSH di VPS<input name="vu"></label>
+<label>Domain (opsional)<input name="dom"></label>
+</form>
+
+<h2 id="ttl"></h2>
+<div class="panel"><p id="desc"></p><div id="steps"></div></div>
+
+<h2>Perbandingan</h2>
+<div class="wrap"><table>
+<tr><th>Komponen</th><th>Jenis layanan cloud</th><th>Biaya</th><th>Cocok untuk</th></tr>
+<tr><td>GitHub</td><td>SaaS</td><td>Gratis</td><td>Kode, versi, CI/CD</td></tr>
+<tr><td>GitHub Pages</td><td>PaaS (hosting statis)</td><td>Gratis, repo harus Public</td><td>HTML, CSS, JS</td></tr>
+<tr><td>VPS</td><td>IaaS</td><td>Berbayar (bulanan)</td><td>Backend, database, kontrol penuh</td></tr>
+</table></div>
+
+<h2>Daftar kerja</h2>
+<div class="bar"><i id="pb"></i></div>
+<ul class="chk" id="chk"></ul>
+
+<footer>File di repository ini: index.html, .github/workflows/pages.yml, .github/workflows/deploy-vps.yml, vps-setup.sh.</footer>
+</main>
+<script>
+var KEY="cloudhub-v1",F={user:"nurwahidilyas034-oss",repo:"situs-web-ilyas",ip:"203.0.113.10",vu:"deploy",dom:"example.com"},C={};
+try{Object.assign(F,JSON.parse(localStorage.getItem(KEY+"f")||"{}"));C=JSON.parse(localStorage.getItem(KEY+"c")||"{}")}catch(e){}
+var cur="github";
+function T(){var u=F.user,r=F.repo,h=F.ip,v=F.vu,d=F.dom;return{
+github:{t:"GitHub: simpan dan otomatiskan",x:"Repository menjadi sumber tunggal. Setiap push ke cabang main memicu dua workflow: publikasi ke Pages dan (manual) deploy ke VPS.",s:[
+["Kirim proyek ke GitHub","git init\ngit add .\ngit commit -m \"Cloud Hub\"\ngit branch -M main\ngit remote add origin https://github.com/"+u+"/"+r+".git\ngit push -u origin main"],
+["Isi secrets untuk deploy VPS","Settings > Secrets and variables > Actions > New repository secret:\nVPS_HOST = "+h+"\nVPS_USER = "+v+"\nVPS_PATH = /var/www/"+r+"\nVPS_SSH_KEY = isi file deploy_key (kunci privat)"]]},
+cloud:{t:"Cloud: GitHub Pages",x:"Situs statis tayang gratis tanpa server. Repository harus Public. Sumber Pages diatur ke GitHub Actions, lalu workflow pages.yml mengurus publikasi.",s:[
+["Aktifkan Pages","Settings > Pages > Build and deployment > Source: GitHub Actions"],
+["Alamat situs","https://"+u+".github.io/"+r+"/"],
+["Domain sendiri (opsional)","Settings > Pages > Custom domain: "+d+"\nDNS CNAME: www -> "+u+".github.io"]]},
+vps:{t:"VPS: server sendiri",x:"VPS menjalankan Nginx dan menerima file dari GitHub Actions lewat SSH. Cocok untuk backend atau database yang tidak bisa di Pages.",s:[
+["Siapkan server (sekali saja)","ssh "+v+"@"+h+"\nbash vps-setup.sh "+r+" "+d],
+["Buat kunci deploy di komputer","ssh-keygen -t ed25519 -f deploy_key -N \"\"\nssh-copy-id -i deploy_key.pub "+v+"@"+h],
+["Jalankan deploy","GitHub > Actions > Deploy ke VPS > Run workflow"],
+["HTTPS gratis","sudo apt install -y certbot python3-certbot-nginx\nsudo certbot --nginx -d "+d]]}}}
+function render(){var t=T()[cur];document.getElementById("ttl").textContent=t.t;document.getElementById("desc").textContent=t.x;
+var s=document.getElementById("steps");s.innerHTML="";
+t.s.forEach(function(p){var w=document.createElement("div");w.className="step";var h=document.createElement("h3");h.textContent=p[0];
+var pre=document.createElement("pre");pre.textContent=p[1];var b=document.createElement("button");b.className="cp";b.textContent="Salin";b.onclick=function(){copy(p[1],b)};pre.appendChild(b);w.appendChild(h);w.appendChild(pre);s.appendChild(w)})}
+function copy(txt,b){var done=function(){b.textContent="Tersalin";setTimeout(function(){b.textContent="Salin"},1400)};
+if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(done)}else{var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();done()}}
+document.querySelectorAll(".node").forEach(function(n){n.onclick=function(){cur=n.dataset.k;document.querySelectorAll(".node").forEach(function(x){x.setAttribute("aria-selected",x===n)});render()}});
+var f=document.getElementById("f");Object.keys(F).forEach(function(k){f.elements[k].value=F[k]});
+f.oninput=function(e){F[e.target.name]=e.target.value.trim()||F[e.target.name];try{localStorage.setItem(KEY+"f",JSON.stringify(F))}catch(x){}render()};
+var L=["Repository dibuat dan Public","Kode ter-push ke cabang main","Pages: Source diset GitHub Actions","Situs github.io terbuka","VPS aktif dan bisa di-SSH","vps-setup.sh dijalankan","Secrets Actions terisi","Deploy ke VPS berhasil"];
+var ul=document.getElementById("chk");
+function prog(){var n=L.filter(function(_,i){return C[i]}).length;document.getElementById("pb").style.width=(n/L.length*100)+"%"}
+L.forEach(function(txt,i){var li=document.createElement("li"),lb=document.createElement("label"),c=document.createElement("input");c.type="checkbox";c.checked=!!C[i];
+c.onchange=function(){C[i]=c.checked;try{localStorage.setItem(KEY+"c",JSON.stringify(C))}catch(x){}prog()};
+lb.appendChild(c);lb.appendChild(document.createTextNode(txt));li.appendChild(lb);ul.appendChild(li)});
+render();prog();
+</script>
+</body>
+</html>
